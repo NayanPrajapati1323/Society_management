@@ -19,9 +19,14 @@ Route::get('/api/society/{society}/buildings', [AuthController::class, 'getBuild
 Route::get('/api/building/{building}/floors',   [AuthController::class, 'getFloors'])->name('api.floors');
 Route::get('/api/building/{building}/units',    [AuthController::class, 'getUnits'])->name('api.units');
 
-// User Dashboard (role:3)
-Route::middleware(['auth', 'role:2,3', 'society_active'])->group(function () {
-    Route::get('/dashboard', fn() => view('society.user.dashboard'))->name('society.user.dashboard');
+// User Panel (role:3)
+use App\Http\Controllers\Society\SocietyUserController;
+Route::middleware(['auth', 'role:3', 'society_approved', 'society_active'])->prefix('user')->name('society.user.')->group(function () {
+    Route::get('/dashboard',       [SocietyUserController::class, 'dashboard'])->name('dashboard');
+    Route::get('/passbook',        [SocietyUserController::class, 'passbook'])->name('passbook');
+    Route::get('/settings',        [SocietyUserController::class, 'settings'])->name('settings');
+    Route::post('/profile/update',  [SocietyUserController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/password/update', [SocietyUserController::class, 'updatePassword'])->name('password.update');
 });
 
 // Society Admin Dashboard (role:2)

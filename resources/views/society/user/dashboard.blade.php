@@ -1,48 +1,87 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Dashboard – SocietyPro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-  <style>
-    :root { --primary:#6C63FF; --gradient:linear-gradient(135deg,#6C63FF,#43e97b); }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'Inter',sans-serif; min-height:100vh; background:linear-gradient(160deg,#0f0e17,#1a1a2e,#16213e); display:flex; align-items:center; justify-content:center; }
-    .card { background:rgba(255,255,255,.06); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:3rem; max-width:500px; width:90%; text-align:center; }
-    .icon { width:72px; height:72px; border-radius:20px; background:var(--gradient); display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; font-size:2rem; color:#fff; }
-    h2 { color:#fff; font-size:1.6rem; font-weight:800; margin-bottom:.5rem; }
-    p { color:rgba(255,255,255,.6); font-size:.9rem; line-height:1.7; }
-    .badge { display:inline-block; background:rgba(108,99,255,.25); color:#a5a0ff; border:1px solid rgba(108,99,255,.4); padding:.3rem .9rem; border-radius:20px; font-size:.78rem; font-weight:600; margin:1.25rem 0; }
-    .btn { display:inline-flex; align-items:center; gap:.4rem; padding:.7rem 1.5rem; border-radius:12px; font-size:.9rem; font-weight:700; cursor:pointer; text-decoration:none; border:none; font-family:inherit; transition:all .2s; }
-    .btn-primary { background:var(--gradient); color:#fff; }
-    .btn-outline { background:transparent; border:1.5px solid rgba(255,255,255,.25); color:rgba(255,255,255,.7); margin-top:.5rem; }
-    .actions { display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:1.5rem; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon"><i class="bi bi-person-check-fill"></i></div>
-    <div class="badge">Logged in as <strong>{{ auth()->user()->role->display_name ?? 'User' }}</strong></div>
-    <h2>Welcome, {{ auth()->user()->name }}! 👋</h2>
-    <p>You're successfully logged in to SocietyPro. Your society dashboard is being set up. Please contact your Society Admin for more details.</p>
-    @if(auth()->user()->society)
-    <p style="margin-top:1rem;color:rgba(255,255,255,.8);">
-      <i class="bi bi-buildings-fill" style="color:#43e97b;"></i>
-      <strong style="color:#fff;">{{ auth()->user()->society->name }}</strong>
-    </p>
-    @endif
-    <div class="actions">
-      <form action="{{ route('society.logout') }}" method="POST" style="width:100%;text-align:center;">
-        @csrf
-        <button type="submit" class="btn btn-outline" style="width:100%;justify-content:center;">
-          <i class="bi bi-box-arrow-left"></i> Sign Out
-        </button>
-      </form>
-      <a href="{{ route('society.landing') }}" class="btn" style="color:rgba(255,255,255,.5);font-size:.82rem;text-decoration:underline;">Back to Home</a>
+@extends('society.layouts.user')
+
+@section('title', 'Resident Dashboard')
+@section('page-title', 'Resident Dashboard')
+
+@section('content')
+<div class="stats-grid">
+  <div class="card stat-card">
+    <div class="stat-label">Total Contribution</div>
+    <div class="stat-val">₹{{ number_format($totalPaid, 2) }}</div>
+    <div style="font-size: .8rem; color: var(--success); font-weight: 700;">
+      <i class="bi bi-graph-up-arrow"></i> Society Funds
     </div>
   </div>
-</body>
-</html>
+  <div class="card stat-card border-danger" style="border-left: 4px solid var(--danger);">
+    <div class="stat-label">Unpaid Dues</div>
+    <div class="stat-val" style="color: var(--danger);">₹{{ number_format($pendingAmount, 2) }}</div>
+    <div style="font-size: .8rem; color: var(--text-muted);">
+      {{ $pendingAmount > 0 ? 'Action Required' : 'All Clear' }}
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Unit Profile</div>
+    <div class="stat-val" style="font-size: 1.4rem;">{{ Auth::user()->unit_number }}</div>
+    <div style="font-size: .8rem; color: var(--text-muted); text-transform: capitalize;">
+      Society: {{ Auth::user()->society->name }}
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+  <!-- Recent Bills -->
+  <div class="card">
+    <div class="p-all" style="border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 1.1rem; font-weight: 800;">Recent Maintenance Bills</h3>
+      <a href="{{ route('society.user.passbook') }}" class="btn btn-outline" style="padding: .4rem .8rem; font-size: .8rem;">View All</a>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($recentTransactions as $bill)
+          <tr>
+            <td>{{ $bill->month }} {{ $bill->year }}</td>
+            <td>Maintenance Bill</td>
+            <td style="font-weight: 700;">₹{{ number_format($bill->total_amount, 2) }}</td>
+            <td>
+              <span class="badge {{ $bill->status == 'paid' ? 'badge-success' : 'badge-danger' }}">
+                {{ ucfirst($bill->status) }}
+              </span>
+            </td>
+          </tr>
+          @empty
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 3rem;">No recent bills found.</td>
+          </tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Info -->
+  <div class="card">
+    <div class="p-all" style="border-bottom: 1px solid var(--border);">
+      <h3 style="font-size: 1.1rem; font-weight: 800;">Resident Notice</h3>
+    </div>
+    <div class="p-all">
+      <div style="padding: 1rem; background: var(--primary-light); border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 1rem;">
+        <p style="font-size: .85rem; color: var(--primary); font-weight: 600; line-height: 1.6;">
+          Welcome to the new SocietyPro Resident portal. You can now track your maintenance and update profile here.
+        </p>
+      </div>
+      <div style="font-size: .85rem; color: var(--text-muted);">
+        <strong>Support:</strong> For any billing discrepancies, please contact your society admin directly.
+      </div>
+    </div>
+  </div>
+</div>
+@endsection

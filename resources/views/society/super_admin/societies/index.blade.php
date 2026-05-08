@@ -66,7 +66,25 @@
           </td>
           <td>
             @if($society->plan)
-              <span class="badge" style="background:var(--primary-light);color:var(--primary);">{{ $society->plan->name }}</span>
+              <div class="table-name" style="font-size:.85rem; font-weight:600;">{{ $society->plan->name }}</div>
+              <div style="font-size:.7rem; color:var(--muted); margin-top:.2rem; display:flex; gap:.3rem; flex-wrap:wrap;">
+                @if($society->plan_duration == 12)
+                  <span class="badge" style="background:#dcfce7; color:#166534; font-size:.65rem; padding:.1rem .3rem;">13 Month Active</span>
+                @else
+                  <span class="badge" style="background:#f3f4f6; color:#374151; font-size:.65rem; padding:.1rem .3rem;">{{ $society->plan_duration }} Month Active</span>
+                @endif
+                
+                @if($society->has_website)
+                  <span class="badge" style="background:#e0e7ff; color:#4338ca; font-size:.65rem; padding:.1rem .3rem;"><i class="bi bi-globe"></i> Website</span>
+                @endif
+              </div>
+              <div style="font-size:.7rem; margin-top:.3rem;">
+                @if($society->is_plan_expired)
+                  <span style="color:#ef4444; font-weight:700;"><i class="bi bi-exclamation-circle"></i> Expired</span>
+                @else
+                  <span style="color:var(--muted);">Expires: {{ \Carbon\Carbon::parse($society->plan_expiry_date)->format('d M Y') }}</span>
+                @endif
+              </div>
             @else
               <span style="color:var(--muted);font-size:.8rem;">No Plan</span>
             @endif
@@ -90,6 +108,11 @@
           </td>
           <td>
             <div style="display:flex;gap:.3rem;flex-wrap:wrap;">
+              @if($society->is_plan_expired)
+                <button onclick="openRenewModal({{ json_encode($society) }})" class="btn btn-sm btn-danger" title="Renew Plan">
+                  <i class="bi bi-arrow-repeat"></i> Renew
+                </button>
+              @endif
               <button onclick="openEditModal({{ json_encode($society) }})" class="btn btn-sm btn-outline" title="Edit Society"><i class="bi bi-pencil-fill"></i></button>
               <form action="{{ route('super-admin.societies.toggle', $society) }}" method="POST" style="display:inline;">
                 @csrf @method('PATCH')
@@ -181,6 +204,36 @@
             <label>Pincode</label>
             <input type="text" name="pincode" class="form-control" placeholder="380015" />
           </div>
+          <div class="form-group">
+            <label>Select Plan *</label>
+            <select name="plan_id" id="add_plan_id" class="form-control" required onchange="calculatePrice('add')">
+              <option value="">Select Plan</option>
+              @foreach($plans as $p)
+                <option value="{{ $p->id }}" data-price="{{ $p->monthly_price }}" data-website-price="{{ $p->website_price }}" data-maintenance-price="{{ $p->website_maintenance_price }}">{{ $p->name }} (₹{{ $p->monthly_price }}/mo)</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Plan Duration *</label>
+            <select name="plan_duration" id="add_plan_duration" class="form-control" required onchange="calculatePrice('add')">
+              <option value="6">6 Months</option>
+              <option value="12">12 Months (+1 Month Extra)</option>
+            </select>
+          </div>
+          <div class="form-group full" style="display:flex; align-items:center; gap:.5rem;">
+            <label class="toggle-switch">
+              <input type="checkbox" name="has_website" id="add_has_website" value="1" onchange="calculatePrice('add')" />
+              <span class="toggle-slider"></span>
+            </label>
+            <label style="margin:0;">Include Society Website?</label>
+          </div>
+          <div class="form-group full" id="add_price_display" style="display:none; background:var(--primary-light); padding:.75rem; border-radius:.5rem; border:1px solid var(--primary); margin-top:.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:600; color:var(--primary);">Total Price:</span>
+              <span id="add_total_price" style="font-weight:700; color:var(--primary); font-size:1.1rem;">₹0.00</span>
+            </div>
+            <div id="add_plan_info" style="font-size:.75rem; color:var(--primary); margin-top:.25rem;"></div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -253,14 +306,35 @@
             <label>Pincode</label>
             <input type="text" name="pincode" id="edit_pincode" class="form-control" />
           </div>
-          <div class="form-group full">
-            <label>Select Plan</label>
-            <select name="plan_id" id="edit_plan_id" class="form-control">
+          <div class="form-group">
+            <label>Select Plan *</label>
+            <select name="plan_id" id="edit_plan_id" class="form-control" required onchange="calculatePrice('edit')">
               <option value="">No Plan</option>
               @foreach($plans as $plan)
-                <option value="{{ $plan->id }}">{{ $plan->name }}</option>
+                <option value="{{ $plan->id }}" data-price="{{ $plan->monthly_price }}" data-website-price="{{ $plan->website_price }}" data-maintenance-price="{{ $plan->website_maintenance_price }}">{{ $plan->name }} (₹{{ $plan->monthly_price }}/mo)</option>
               @endforeach
             </select>
+          </div>
+          <div class="form-group">
+            <label>Plan Duration *</label>
+            <select name="plan_duration" id="edit_plan_duration" class="form-control" required onchange="calculatePrice('edit')">
+              <option value="6">6 Months</option>
+              <option value="12">12 Months (+1 Month Extra)</option>
+            </select>
+          </div>
+          <div class="form-group full" style="display:flex; align-items:center; gap:.5rem;">
+            <label class="toggle-switch">
+              <input type="checkbox" name="has_website" id="edit_has_website" value="1" onchange="calculatePrice('edit')" />
+              <span class="toggle-slider"></span>
+            </label>
+            <label style="margin:0;" id="edit_website_label">Include Society Website?</label>
+          </div>
+          <div class="form-group full" id="edit_price_display" style="display:none; background:var(--primary-light); padding:.75rem; border-radius:.5rem; border:1px solid var(--primary); margin-top:.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:600; color:var(--primary);">Total Price:</span>
+              <span id="edit_total_price" style="font-weight:700; color:var(--primary); font-size:1.1rem;">₹0.00</span>
+            </div>
+            <div id="edit_plan_info" style="font-size:.75rem; color:var(--primary); margin-top:.25rem;"></div>
           </div>
         </div>
       </div>
@@ -272,7 +346,58 @@
   </div>
 </div>
 
-{{-- Modal: Create Admin --}}
+{{-- Modal: Renew Plan --}}
+<div id="renewPlanModal" class="modal-overlay">
+  <div class="modal-container" style="max-width:450px;">
+    <div class="modal-header">
+      <h3 class="card-title" style="margin:0; font-size:1.2rem;"><i class="bi bi-arrow-repeat" style="color:var(--primary);"></i> Renew Plan</h3>
+      <button onclick="closeModal('renewPlanModal')" class="modal-close">&times;</button>
+    </div>
+    <form id="renewPlanForm" method="POST">
+      @csrf @method('PUT')
+      <div class="modal-body">
+        <input type="hidden" name="name" id="renew_hidden_name" />
+        <div id="renew_society_name" style="font-weight:700; color:var(--dark); margin-bottom:1rem; font-size:1rem; border-bottom:1px solid var(--border); padding-bottom:.5rem;"></div>
+        <div class="form-grid" style="display:block;">
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label>Select Plan *</label>
+            <select name="plan_id" id="renew_plan_id" class="form-control" required onchange="calculatePrice('renew')">
+              <option value="">No Plan</option>
+              @foreach($plans as $plan)
+                <option value="{{ $plan->id }}" data-price="{{ $plan->monthly_price }}" data-website-price="{{ $plan->website_price }}" data-maintenance-price="{{ $plan->website_maintenance_price }}">{{ $plan->name }} (₹{{ $plan->monthly_price }}/mo)</option>
+              @endforeach
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label>Plan Duration *</label>
+            <select name="plan_duration" id="renew_plan_duration" class="form-control" required onchange="calculatePrice('renew')">
+              <option value="6">6 Months</option>
+              <option value="12">12 Months (+1 Month Extra)</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex; align-items:center; gap:.5rem; margin-bottom:1rem;">
+            <label class="toggle-switch">
+              <input type="checkbox" name="has_website" id="renew_has_website" value="1" onchange="calculatePrice('renew')" />
+              <span class="toggle-slider"></span>
+            </label>
+            <label style="margin:0;" id="renew_website_label">Include Society Website?</label>
+          </div>
+          <div class="form-group" id="renew_price_display" style="display:none; background:var(--primary-light); padding:.75rem; border-radius:.5rem; border:1px solid var(--primary); margin-top:.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:600; color:var(--primary);">Total Renewal Price:</span>
+              <span id="renew_total_price" style="font-weight:700; color:var(--primary); font-size:1.1rem;">₹0.00</span>
+            </div>
+            <div id="renew_plan_info" style="font-size:.75rem; color:var(--primary); margin-top:.25rem;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" style="flex:1;">Renew Plan Now</button>
+        <button type="button" onclick="closeModal('renewPlanModal')" class="btn btn-outline" style="flex:1;">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="createAdminModal" class="modal-overlay">
   <div class="modal-container" style="max-width:400px;">
     <div class="modal-header">
@@ -326,7 +451,57 @@
     openModal('createAdminModal');
   }
 
+  function calculatePrice(prefix) {
+    const planSelect = document.getElementById(prefix + '_plan_id');
+    const durationSelect = document.getElementById(prefix + '_plan_duration');
+    const websiteCheckbox = document.getElementById(prefix + '_has_website');
+    const priceDisplay = document.getElementById(prefix + '_price_display');
+    const totalPriceEl = document.getElementById(prefix + '_total_price');
+    const planInfoEl = document.getElementById(prefix + '_plan_info');
+
+    const selectedOption = planSelect.options[planSelect.selectedIndex];
+    if (!selectedOption.value) {
+      priceDisplay.style.display = 'none';
+      return;
+    }
+
+    const monthlyPrice = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+    const websitePrice = parseFloat(selectedOption.getAttribute('data-website-price')) || 0;
+    const maintenancePrice = parseFloat(selectedOption.getAttribute('data-maintenance-price')) || 0;
+    const duration = parseInt(durationSelect.value) || 6;
+    
+    let total = (monthlyPrice * duration);
+    let info = duration + " Months Plan";
+    
+    if (websiteCheckbox.checked) {
+      if ((prefix === 'edit' || prefix === 'renew') && currentSocietyHasWebsite) {
+        total += maintenancePrice;
+        info += " + Website Maintenance (₹" + maintenancePrice.toFixed(2) + ")";
+      } else {
+        total += websitePrice;
+        info += " + Website Activation (₹" + websitePrice.toFixed(2) + ")";
+      }
+    }
+
+    if (duration === 12) {
+      info += " | 13 Months Total";
+    }
+
+    totalPriceEl.innerText = "₹" + total.toFixed(2);
+    planInfoEl.innerText = info;
+    priceDisplay.style.display = 'block';
+  }
+
+  let currentSocietyHasWebsite = false;
   function openEditModal(society) {
+    currentSocietyHasWebsite = !!society.has_website;
+    const label = document.getElementById('edit_website_label');
+    if (currentSocietyHasWebsite) {
+      label.innerText = "Website Maintenance (Annual)";
+    } else {
+      label.innerText = "Include Society Website?";
+    }
+
     document.getElementById('editSocietyForm').action = "/super-admin/societies/" + society.id;
     document.getElementById('edit_name').value = society.name;
     document.getElementById('edit_email').value = society.contact_email || '';
@@ -334,6 +509,10 @@
     document.getElementById('edit_address').value = society.address || '';
     document.getElementById('edit_pincode').value = society.pincode || '';
     document.getElementById('edit_plan_id').value = society.plan_id || '';
+    document.getElementById('edit_plan_duration').value = society.plan_duration || '6';
+    document.getElementById('edit_has_website').checked = !!society.has_website;
+    
+    calculatePrice('edit');
     
     if(society.type === 'flat') document.getElementById('edit_type_flat').checked = true;
     else document.getElementById('edit_type_row').checked = true;
@@ -344,6 +523,27 @@
     document.getElementById('editCitySelect').value = society.city || '';
 
     openModal('editSocietyModal');
+  }
+
+  function openRenewModal(society) {
+    currentSocietyHasWebsite = !!society.has_website;
+    const label = document.getElementById('renew_website_label');
+    if (currentSocietyHasWebsite) {
+      label.innerText = "Website Maintenance (Annual)";
+    } else {
+      label.innerText = "Include Society Website?";
+    }
+
+    document.getElementById('renewPlanForm').action = "/super-admin/societies/" + society.id;
+    document.getElementById('renew_society_name').innerText = "Renewal for: " + society.name;
+    document.getElementById('renew_hidden_name').value = society.name;
+    document.getElementById('renew_plan_id').value = society.plan_id || '';
+    document.getElementById('renew_plan_duration').value = society.plan_duration || '6';
+    document.getElementById('renew_has_website').checked = !!society.has_website;
+    
+    calculatePrice('renew');
+    
+    openModal('renewPlanModal');
   }
 
   function initStates(selectId) {

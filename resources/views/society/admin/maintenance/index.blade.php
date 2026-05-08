@@ -6,7 +6,7 @@
 @section('content')
 <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
   <button class="btn btn-primary" onclick="openModal('addBillModal')">
-    <i class="bi bi-plus-lg"></i> Generate New Bill
+    <i class="bi bi-plus-lg"></i> Generate Bulk Bills
   </button>
 </div>
 
@@ -60,14 +60,8 @@
         <button type="button" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="closeModal('addBillModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label>Select Unit *</label>
-          <select name="unit_id" class="form-select" required>
-            <option value="">Choose Unit</option>
-            @foreach($units as $unit)
-            <option value="{{ $unit->id }}">Unit {{ $unit->unit_number }} ({{ $unit->owner->name ?? 'Vacant' }})</option>
-            @endforeach
-          </select>
+        <div class="alert alert-info" style="margin-bottom: 1rem; font-size: .85rem; background: #e0f2fe; color: #0369a1; padding: .75rem; border-radius: .5rem; border: 1px solid #bae6fd;">
+          <i class="bi bi-info-circle-fill"></i> This will generate maintenance bills for <strong>ALL units</strong> in your society for the selected period.
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
           <div class="form-group">
@@ -94,7 +88,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" onclick="closeModal('addBillModal')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Generate Bill</button>
+        <button type="submit" class="btn btn-primary">Generate Bulk Bills</button>
       </div>
     </form>
   </div>

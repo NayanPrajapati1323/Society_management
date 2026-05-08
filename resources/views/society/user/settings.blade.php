@@ -55,16 +55,25 @@
       @csrf
       <div class="form-group">
         <label>Current Password</label>
-        <input type="password" name="current_password" class="form-control" placeholder="••••••••" required />
+        <div style="position:relative;">
+          <input type="password" name="current_password" id="cur_pass" class="form-control" placeholder="••••••••" required />
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--text-muted);" onclick="togglePassword('cur_pass', this)"></i>
+        </div>
       </div>
       <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;" />
       <div class="form-group">
         <label>New Password</label>
-        <input type="password" name="password" class="form-control" placeholder="••••••••" required />
+        <div style="position:relative;">
+          <input type="password" name="password" id="new_pass" class="form-control" placeholder="••••••••" required />
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--text-muted);" onclick="togglePassword('new_pass', this)"></i>
+        </div>
       </div>
       <div class="form-group">
         <label>Confirm New Password</label>
-        <input type="password" name="password_confirmation" class="form-control" placeholder="••••••••" required />
+        <div style="position:relative;">
+          <input type="password" name="password_confirmation" id="conf_pass" class="form-control" placeholder="••••••••" required />
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--text-muted);" onclick="togglePassword('conf_pass', this)"></i>
+        </div>
       </div>
       <button type="submit" class="btn btn-outline" style="width: 100%; border-color: var(--primary); color: var(--primary);">
         Change Password & Log Out All Sessions

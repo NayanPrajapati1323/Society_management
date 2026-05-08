@@ -1,9 +1,16 @@
 @extends('society.layouts.society_admin')
 
-@section('title', 'User Approvals')
+@section('title', 'Resident Management')
 @section('page-title', 'Resident Management')
 
 @section('content')
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+  <div class="page-title" style="margin:0;">Resident Management</div>
+  <button class="btn btn-primary" onclick="openModal('addResidentModal')">
+    <i class="bi bi-plus-lg"></i> Add Resident
+  </button>
+</div>
+
 <div class="card">
   <div class="card-header">
     <h3 class="card-title">Pending Residency Requests</h3>
@@ -102,7 +109,13 @@
             <td><strong style="color:var(--primary);">{{ $user->unit_number ?? 'N/A' }}</strong></td>
             <td><span class="badge badge-active">Active</span></td>
             <td>
-              <button class="btn btn-outline btn-sm">Manage</button>
+              <div style="display:flex; gap:.5rem;">
+                <button onclick="editResident({{ json_encode($user) }})" class="btn btn-outline btn-sm">Edit</button>
+                <form action="{{ route('society-admin.users.delete', $user) }}" method="POST" onsubmit="return confirm('Remove this resident? This will also mark their unit as vacant.')">
+                  @csrf @method('DELETE')
+                  <button type="submit" class="btn btn-outline btn-sm" style="color:#dc2626; border-color:#fee2e2;">Delete</button>
+                </form>
+              </div>
             </td>
           </tr>
           @endforeach
@@ -111,4 +124,96 @@
     </div>
   </div>
 </div>
+
+<!-- Add Resident Modal -->
+<div id="addResidentModal" class="modal-overlay">
+  <div class="modal-container" style="max-width: 500px;">
+    <form action="{{ route('society-admin.users.store') }}" method="POST">
+      @csrf
+      <div class="modal-header">
+        <h3 class="card-title">Add New Resident</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('addResidentModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email" name="email" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Unit Number</label>
+          <input type="text" name="unit_number" class="form-control" placeholder="e.g. 101 or A-1" />
+        </div>
+        <div class="form-group">
+          <label>Initial Password *</label>
+          <div style="position:relative;">
+            <input type="password" name="password" id="add_res_pass" class="form-control" value="resident123" required />
+            <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('add_res_pass', this)"></i>
+          </div>
+          <small style="color:var(--muted);">Default: resident123</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('addResidentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Resident</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Resident Modal -->
+<div id="editResidentModal" class="modal-overlay">
+  <div class="modal-container" style="max-width: 500px;">
+    <form id="editResidentForm" method="POST">
+      @csrf @method('PUT')
+      <div class="modal-header">
+        <h3 class="card-title">Edit Resident</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('editResidentModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" id="res_name" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Email Address *</label>
+          <input type="email" name="email" id="res_email" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Unit Number</label>
+          <input type="text" name="unit_number" id="res_unit_number" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Reset Password (Optional)</label>
+          <div style="position:relative;">
+            <input type="password" name="password" id="edit_res_pass" class="form-control" placeholder="Leave blank to keep current" />
+            <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('edit_res_pass', this)"></i>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('editResidentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Details</button>
+      </div>
+    </form>
+  </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  function editResident(user) {
+    document.getElementById('res_name').value = user.name;
+    document.getElementById('res_email').value = user.email;
+    document.getElementById('res_unit_number').value = user.unit_number || '';
+    document.getElementById('editResidentForm').action = "/society-admin/users/" + user.id;
+    openModal('editResidentModal');
+  }
+</script>
 @endsection

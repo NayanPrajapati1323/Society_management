@@ -38,10 +38,18 @@ Route::middleware(['auth', 'role:2', 'society_active'])->prefix('society-admin')
     // Structure
     Route::get('/structure',              [SocietyAdminController::class, 'structure'])->name('structure');
     Route::post('/structure/building',    [SocietyAdminController::class, 'storeBuilding'])->name('structure.building.store');
+    Route::put('/structure/building/{building}', [SocietyAdminController::class, 'updateBuilding'])->name('structure.building.update');
+    Route::delete('/structure/building/{building}', [SocietyAdminController::class, 'deleteBuilding'])->name('structure.building.delete');
+    
     Route::post('/structure/units',       [SocietyAdminController::class, 'storeUnits'])->name('structure.units.store');
+    Route::put('/structure/unit/{unit}',  [SocietyAdminController::class, 'updateUnit'])->name('structure.unit.update');
+    Route::delete('/structure/unit/{unit}', [SocietyAdminController::class, 'deleteUnit'])->name('structure.unit.delete');
 
     // Users
     Route::get('/users',                  [SocietyAdminController::class, 'users'])->name('users');
+    Route::post('/users',                 [SocietyAdminController::class, 'storeUser'])->name('users.store');
+    Route::put('/users/{user}',           [SocietyAdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}',        [SocietyAdminController::class, 'deleteUser'])->name('users.delete');
     Route::patch('/users/{user}/approve', [SocietyAdminController::class, 'approveUser'])->name('users.approve');
     Route::delete('/users/{user}/reject', [SocietyAdminController::class, 'rejectUser'])->name('users.reject');
 
@@ -83,6 +91,9 @@ Route::middleware(['auth', 'role:1'])->prefix('super-admin')->name('super-admin.
 
     // Users
     Route::get('/users',                           [SuperAdminController::class, 'users'])->name('users');
+    Route::post('/users',                          [SuperAdminController::class, 'storeUser'])->name('users.store');
+    Route::put('/users/{user}',                    [SuperAdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}',                 [SuperAdminController::class, 'deleteUser'])->name('users.delete');
     Route::patch('/users/{user}/toggle',           [SuperAdminController::class, 'toggleUser'])->name('users.toggle');
 
     // Settings

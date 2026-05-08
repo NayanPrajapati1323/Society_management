@@ -117,15 +117,24 @@
             <div style="max-width:500px;">
               <div class="form-group" style="margin-bottom:1.25rem;">
                 <label>Current Password</label>
-                <input type="password" name="current_password" class="form-control" required />
+                <div style="position:relative;">
+                  <input type="password" name="current_password" id="cur_pass" class="form-control" required />
+                  <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('cur_pass', this)"></i>
+                </div>
               </div>
               <div class="form-group" style="margin-bottom:1.25rem;">
                 <label>New Password</label>
-                <input type="password" name="password" class="form-control" required />
+                <div style="position:relative;">
+                  <input type="password" name="password" id="new_pass" class="form-control" required />
+                  <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('new_pass', this)"></i>
+                </div>
               </div>
               <div class="form-group" style="margin-bottom:1.25rem;">
                 <label>Confirm New Password</label>
-                <input type="password" name="password_confirmation" class="form-control" required />
+                <div style="position:relative;">
+                  <input type="password" name="password_confirmation" id="conf_pass" class="form-control" required />
+                  <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('conf_pass', this)"></i>
+                </div>
               </div>
               <div style="margin-top:2rem;">
                 <button type="submit" class="btn btn-primary">Update Password</button>

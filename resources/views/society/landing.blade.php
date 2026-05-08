@@ -374,6 +374,12 @@
           <span class="plan-contact-sub">for pricing</span>
         </div>
         <ul class="plan-features">
+          @if($plan->website_price > 0)
+          <li>
+            <i class="bi bi-check-circle-fill check"></i>
+            Custom Society Website Available
+          </li>
+          @endif
           @foreach($plan->features as $feature)
           <li>
             <i class="bi {{ $feature->is_included ? 'bi-check-circle-fill check' : 'bi-x-circle cross' }}"></i>

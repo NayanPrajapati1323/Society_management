@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Plan extends Model
 {
     protected $fillable = [
-        'name', 'description', 'features_summary',
-        'max_units', 'max_users', 'is_active', 'sort_order'
+        'name', 'description', 'min_units', 'max_units', 'monthly_price', 'website_price', 'website_maintenance_price', 'features_summary',
+        'is_active', 'sort_order'
     ];
 
     protected $casts = [

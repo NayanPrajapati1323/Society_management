@@ -132,6 +132,7 @@
         <div class="input-wrap">
           <i class="bi bi-lock-fill input-icon"></i>
           <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required />
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('password', this)"></i>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;">
@@ -153,5 +154,17 @@
     </div>
   </div>
 </div>
+<script>
+  function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('bi-eye-slash', 'bi-eye');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('bi-eye', 'bi-eye-slash');
+    }
+  }
+</script>
 </body>
 </html>

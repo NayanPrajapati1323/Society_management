@@ -60,7 +60,6 @@ class SuperAdminController extends Controller
         $admins = User::where('role_id', 2)->get();
         return view('society.super_admin.societies.create', compact('plans', 'admins'));
     }
-
     public function storeSociety(Request $request)
     {
         $request->validate([
@@ -73,12 +72,28 @@ class SuperAdminController extends Controller
             'contact_email' => 'nullable|email',
             'contact_phone' => 'nullable|string|max:20',
             'plan_id'       => 'nullable|exists:plans,id',
+            'plan_duration' => 'nullable|in:6,12',
+            'has_website'   => 'nullable|boolean',
         ]);
 
-        Society::create($request->only([
+        $data = $request->only([
             'name', 'type', 'address', 'city', 'state', 'pincode',
-            'contact_email', 'contact_phone', 'plan_id'
-        ]) + ['is_active' => false, 'country' => 'India']);
+            'contact_email', 'contact_phone', 'plan_id', 'plan_duration', 'has_website'
+        ]);
+
+        if ($request->plan_id && $request->plan_duration) {
+            $plan = Plan::find($request->plan_id);
+            if ($plan) {
+                $basePrice = $plan->monthly_price * $request->plan_duration;
+                $websitePrice = $request->boolean('has_website') ? $plan->website_price : 0;
+                $data['plan_price'] = $basePrice + $websitePrice;
+                
+                $monthsToAdd = ($request->plan_duration == 12) ? 13 : $request->plan_duration;
+                $data['plan_expiry_date'] = now()->addMonths($monthsToAdd);
+            }
+        }
+
+        Society::create($data + ['is_active' => false, 'country' => 'India']);
 
         return redirect()->route('super-admin.societies')->with('success', 'Society created successfully.');
     }
@@ -117,14 +132,40 @@ class SuperAdminController extends Controller
         $request->validate([
             'name'          => 'required|string|max:255',
             'plan_id'       => 'nullable|exists:plans,id',
+            'plan_duration' => 'nullable|in:6,12',
+            'has_website'   => 'nullable|boolean',
             'admin_id'      => 'nullable|exists:users,id',
             'contact_email' => 'nullable|email',
         ]);
 
-        $society->update($request->only([
+        $data = $request->only([
             'name', 'address', 'city', 'state', 'pincode', 'country',
-            'contact_email', 'contact_phone', 'plan_id', 'admin_id'
-        ]));
+            'contact_email', 'contact_phone', 'plan_id', 'admin_id', 'plan_duration', 'has_website'
+        ]);
+
+        if ($request->plan_id && $request->plan_duration) {
+            $plan = Plan::find($request->plan_id);
+            if ($plan) {
+                $basePrice = $plan->monthly_price * $request->plan_duration;
+                
+                // If already had website, use maintenance price, else use activation price
+                if ($society->has_website && $request->boolean('has_website')) {
+                    $websitePrice = $plan->website_maintenance_price;
+                } else {
+                    $websitePrice = $request->boolean('has_website') ? $plan->website_price : 0;
+                }
+                
+                $data['plan_price'] = $basePrice + $websitePrice;
+                
+                // Only update expiry if it's a new plan or duration changed or it was expired
+                if ($society->plan_id != $request->plan_id || $society->plan_duration != $request->plan_duration || $society->is_plan_expired) {
+                    $monthsToAdd = ($request->plan_duration == 12) ? 13 : $request->plan_duration;
+                    $data['plan_expiry_date'] = now()->addMonths($monthsToAdd);
+                }
+            }
+        }
+
+        $society->update($data);
 
         return redirect()->route('super-admin.societies')->with('success', 'Society updated successfully.');
     }
@@ -162,8 +203,11 @@ class SuperAdminController extends Controller
             'name'             => 'required|string|max:255',
             'description'      => 'nullable|string',
             'features_summary' => 'nullable|string',
+            'min_units'        => 'required|integer|min:0',
             'max_units'        => 'required|integer|min:1',
-            'max_users'        => 'required|integer|min:1',
+            'monthly_price'    => 'required|numeric|min:0',
+            'website_price'    => 'required|numeric|min:0',
+            'website_maintenance_price' => 'required|numeric|min:0',
             'sort_order'       => 'nullable|integer',
             'features'         => 'nullable|array',
             'features.*'       => 'string|max:255',
@@ -173,8 +217,11 @@ class SuperAdminController extends Controller
             'name'             => $request->name,
             'description'      => $request->description,
             'features_summary' => $request->features_summary,
+            'min_units'        => $request->min_units,
             'max_units'        => $request->max_units,
-            'max_users'        => $request->max_users,
+            'monthly_price'    => $request->monthly_price,
+            'website_price'    => $request->website_price,
+            'website_maintenance_price' => $request->website_maintenance_price,
             'is_active'        => $request->boolean('is_active', true),
             'sort_order'       => $request->sort_order ?? 0,
         ]);
@@ -202,17 +249,23 @@ class SuperAdminController extends Controller
     public function updatePlan(Request $request, Plan $plan)
     {
         $request->validate([
-            'name'       => 'required|string|max:255',
-            'max_units'  => 'required|integer|min:1',
-            'max_users'  => 'required|integer|min:1',
+            'name'             => 'required|string|max:255',
+            'min_units'        => 'required|integer|min:0',
+            'max_units'        => 'required|integer|min:1',
+            'monthly_price'    => 'required|numeric|min:0',
+            'website_price'    => 'required|numeric|min:0',
+            'website_maintenance_price' => 'required|numeric|min:0',
         ]);
 
         $plan->update([
             'name'             => $request->name,
             'description'      => $request->description,
             'features_summary' => $request->features_summary,
+            'min_units'        => $request->min_units,
             'max_units'        => $request->max_units,
-            'max_users'        => $request->max_users,
+            'monthly_price'    => $request->monthly_price,
+            'website_price'    => $request->website_price,
+            'website_maintenance_price' => $request->website_maintenance_price,
             'is_active'        => $request->boolean('is_active'),
             'sort_order'       => $request->sort_order ?? 0,
         ]);
@@ -263,7 +316,56 @@ class SuperAdminController extends Controller
         }
 
         $users = $query->latest()->paginate(10);
-        return view('society.super_admin.users.index', compact('users'));
+        $societies = \App\Models\Society::orderBy('name')->get();
+        return view('society.super_admin.users.index', compact('users', 'societies'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8',
+            'role_id'  => 'required|in:2,3', // Admin or Resident
+            'society_id' => 'nullable|exists:societies,id'
+        ]);
+
+        User::create([
+            'name'       => $request->name,
+            'email'      => $request->email,
+            'password'   => Hash::make($request->password),
+            'role_id'    => $request->role_id,
+            'society_id' => $request->society_id,
+            'is_active'  => true,
+            'is_approved'=> true
+        ]);
+
+        return redirect()->back()->with('success', 'User created successfully.');
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'role_id' => 'required|in:2,3',
+            'society_id' => 'nullable|exists:societies,id'
+        ]);
+
+        $data = $request->only('name', 'email', 'role_id', 'society_id');
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+        return redirect()->back()->with('success', 'User updated successfully.');
+    }
+
+    public function deleteUser(User $user)
+    {
+        if ($user->role_id == 1) abort(403);
+        $user->delete();
+        return redirect()->back()->with('success', 'User deleted successfully.');
     }
 
     public function toggleUser(User $user)

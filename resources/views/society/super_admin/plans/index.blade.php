@@ -31,18 +31,22 @@
           </span>
         </div>
         <div style="font-size:.83rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;">{{ $plan->description ?: 'No description.' }}</div>
-        <div style="display:flex;gap:1.25rem;margin-bottom:1rem;">
-          <div style="text-align:center;flex:1;padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border);">
-            <div style="font-size:1.2rem;font-weight:800;color:var(--primary);">{{ $plan->max_units == 9999 ? '∞' : $plan->max_units }}</div>
-            <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Max Units</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:.75rem; margin-bottom:1rem;">
+          <div style="padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border); text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">{{ $plan->min_units }} - {{ $plan->max_units == 9999 ? '∞' : $plan->max_units }}</div>
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Units Range</div>
           </div>
-          <div style="text-align:center;flex:1;padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border);">
-            <div style="font-size:1.2rem;font-weight:800;color:#43e97b;">{{ $plan->max_users == 9999 ? '∞' : $plan->max_users }}</div>
-            <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Max Users</div>
+          <div style="padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border); text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#10b981;">₹{{ number_format($plan->monthly_price, 2) }}</div>
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Monthly Price</div>
           </div>
-          <div style="text-align:center;flex:1;padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border);">
-            <div style="font-size:1.2rem;font-weight:800;color:#f59e0b;">{{ $plan->societies_count ?? $plan->societies()->count() }}</div>
-            <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Societies</div>
+          <div style="padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border); text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#6366f1;">₹{{ number_format($plan->website_price, 2) }}</div>
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Website Price</div>
+          </div>
+          <div style="padding:.65rem;background:#fff;border-radius:10px;border:1px solid var(--border); text-align:center;">
+            <div style="font-size:1.1rem;font-weight:800;color:#f59e0b;">{{ $plan->societies_count ?? $plan->societies()->count() }}</div>
+            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Societies</div>
           </div>
         </div>
         @if($plan->features->count())

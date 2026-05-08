@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Generate maintenance bills on the 1st of every month
+        $schedule->job(new \App\Jobs\GenerateMonthlyMaintenanceBills)->monthlyOn(1, '00:00');
+
+        // Apply penalties daily
+        $schedule->job(new \App\Jobs\ApplyOverduePenalties)->daily();
     }
 
     /**

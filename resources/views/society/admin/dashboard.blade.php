@@ -86,8 +86,8 @@
           <tr>
             <td style="font-size:.8rem;">{{ $entry->entry_date }}</td>
             <td>
-              <span class="badge {{ $entry->type == 'credit' ? 'badge-active' : 'badge-inactive' }}" style="background: {{ $entry->type == 'credit' ? '#dcfce7' : '#fee2e2' }}; color: {{ $entry->type == 'credit' ? '#15803d' : '#dc2626' }};">
-                {{ ucfirst($entry->type) }}
+              <span class="badge {{ $entry->entry_type == 'credit' ? 'badge-active' : 'badge-inactive' }}" style="background: {{ $entry->entry_type == 'credit' ? '#dcfce7' : '#fee2e2' }}; color: {{ $entry->entry_type == 'credit' ? '#15803d' : '#dc2626' }};">
+                {{ ucfirst($entry->entry_type) }}
               </span>
             </td>
             <td><strong>{{ $entry->category }}</strong></td>

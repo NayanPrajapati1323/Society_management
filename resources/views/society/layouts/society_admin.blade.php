@@ -174,5 +174,24 @@ function closeModal(id) { document.getElementById(id).classList.remove('show'); 
 window.onclick = function(event) { if (event.target.classList.contains('modal-overlay')) { event.target.classList.remove('show'); } }
 </script>
 @yield('scripts')
+<script>
+  // Disable number input scroll behavior
+  document.addEventListener("wheel", function(event) {
+    if (document.activeElement.type === "number") {
+      document.activeElement.blur();
+    }
+  });
+
+  function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('bi-eye-slash', 'bi-eye');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('bi-eye', 'bi-eye-slash');
+    }
+  }
+</script>
 </body>
 </html>

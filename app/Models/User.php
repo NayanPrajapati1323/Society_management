@@ -59,4 +59,14 @@ class User extends Authenticatable
     {
         return $this->role_id === Role::USER;
     }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function getWalletBalanceAttribute()
+    {
+        return $this->wallet ? $this->wallet->balance : 0;
+    }
 }

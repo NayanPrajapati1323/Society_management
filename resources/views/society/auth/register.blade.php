@@ -244,9 +244,7 @@
         <div class="input-wrap">
           <i class="bi bi-lock input-icon"></i>
           <input type="password" id="regPassword" name="password" class="form-control" placeholder="Minimum 6 characters" required />
-          <button type="button" class="password-toggle" onclick="togglePassword('regPassword', 'passIcon')">
-            <i id="passIcon" class="bi bi-eye"></i>
-          </button>
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('regPassword', this)"></i>
         </div>
       </div>
 
@@ -254,7 +252,8 @@
         <label>Confirm Password *</label>
         <div class="input-wrap">
           <i class="bi bi-shield-lock input-icon"></i>
-          <input type="password" name="password_confirmation" class="form-control" placeholder="Repeat password" required />
+          <input type="password" id="regPasswordConfirm" name="password_confirmation" class="form-control" placeholder="Repeat password" required />
+          <i class="bi bi-eye-slash toggle-password" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); cursor:pointer; color:var(--muted);" onclick="togglePassword('regPasswordConfirm', this)"></i>
         </div>
       </div>
 

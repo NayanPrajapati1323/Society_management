@@ -37,13 +37,33 @@
             <input type="text" name="features_summary" class="form-control" placeholder="e.g. Manage up to 50 units with essential features" value="{{ old('features_summary') }}" />
           </div>
           <div class="form-group">
-            <label>Max Units *</label>
-            <input type="number" name="max_units" class="form-control" placeholder="50" value="{{ old('max_units', 50) }}" min="1" required />
-            <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Enter 9999 for unlimited</div>
+            <label>Unit Range (Min - Max) *</label>
+            <div style="display:flex; gap:.5rem; align-items:center;">
+              <input type="number" name="min_units" class="form-control" placeholder="0" value="{{ old('min_units', 0) }}" min="0" required />
+              <span>to</span>
+              <input type="number" name="max_units" class="form-control" placeholder="50" value="{{ old('max_units', 50) }}" min="1" required />
+            </div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">e.g. 0 to 50, 51 to 100</div>
           </div>
           <div class="form-group">
-            <label>Max Users *</label>
-            <input type="number" name="max_users" class="form-control" placeholder="100" value="{{ old('max_users', 100) }}" min="1" required />
+            <label>Monthly Price (₹) *</label>
+            <input type="number" name="monthly_price" id="monthly_price" class="form-control" placeholder="500" value="{{ old('monthly_price') }}" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label>Website Activation Price (One-time ₹) *</label>
+            <input type="number" name="website_price" id="website_price" class="form-control" placeholder="1500" value="{{ old('website_price', 0) }}" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label>Website Maintenance Price (Annual ₹) *</label>
+            <input type="number" name="website_maintenance_price" id="website_maintenance_price" class="form-control" placeholder="500" value="{{ old('website_maintenance_price', 0) }}" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label>6 Month Price</label>
+            <input type="text" id="six_month_price" class="form-control" readonly style="background:var(--bg-light);" />
+          </div>
+          <div class="form-group">
+            <label>12 Month Price</label>
+            <input type="text" id="twelve_month_price" class="form-control" readonly style="background:var(--bg-light);" />
           </div>
           <div class="form-group" style="display:flex;align-items:center;gap:1rem;padding-top:.5rem;">
             <label style="margin-bottom:0;">Active (visible on landing page)</label>
@@ -92,6 +112,12 @@
 
 @section('scripts')
 <script>
+document.getElementById('monthly_price').addEventListener('input', function() {
+  const monthly = parseFloat(this.value) || 0;
+  document.getElementById('six_month_price').value = (monthly * 6).toFixed(2);
+  document.getElementById('twelve_month_price').value = (monthly * 12).toFixed(2);
+});
+
 function addFeatureRow() {
   const container = document.getElementById('featuresContainer');
   const div = document.createElement('div');

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 class SocietyAdminController extends Controller
 {
     private function getSociety() {
-        return Auth::user()->society;
+        return Auth::user()->society->load('plan');
     }
 
     // ─── Dashboard ───────────────────────────────────────────
@@ -32,8 +32,8 @@ class SocietyAdminController extends Controller
             'occupied_units'  => Unit::where('society_id', $society->id)->where('status', 'occupied')->count(),
             'total_users'     => User::where('society_id', $society->id)->where('is_approved', true)->count(),
             'pending_users'   => User::where('society_id', $society->id)->where('is_approved', false)->count(),
-            'total_funds'     => PassbookEntry::where('society_id', $society->id)->where('type', 'credit')->sum('amount'),
-            'total_expenses'  => PassbookEntry::where('society_id', $society->id)->where('type', 'debit')->sum('amount'),
+            'total_funds'     => PassbookEntry::where('society_id', $society->id)->where('entry_type', 'credit')->sum('amount'),
+            'total_expenses'  => PassbookEntry::where('society_id', $society->id)->where('entry_type', 'debit')->sum('amount'),
             'unpaid_bills'    => MaintenanceBill::where('society_id', $society->id)->where('status', 'unpaid')->count(),
         ];
         
@@ -61,6 +61,14 @@ class SocietyAdminController extends Controller
                 'flats_per_floor' => 'required|integer|min:1'
             ]);
 
+            $newUnitsCount = $request->floors * $request->flats_per_floor;
+            $currentUnitsCount = Unit::where('society_id', $society->id)->count();
+            $maxUnits = $society->plan->max_units ?? 0;
+
+            if ($maxUnits > 0 && ($currentUnitsCount + $newUnitsCount) > $maxUnits) {
+                return back()->with('error', "Cannot add {$newUnitsCount} units. Your plan limit is {$maxUnits} units (Currently used: {$currentUnitsCount}).");
+            }
+
             $building = Building::create([
                 'society_id' => $society->id,
                 'name'       => $request->name,
@@ -86,6 +94,14 @@ class SocietyAdminController extends Controller
                 'name'         => 'required|string|max:50',
                 'total_houses' => 'required|integer|min:1'
             ]);
+
+            $newUnitsCount = $request->total_houses;
+            $currentUnitsCount = Unit::where('society_id', $society->id)->count();
+            $maxUnits = $society->plan->max_units ?? 0;
+
+            if ($maxUnits > 0 && ($currentUnitsCount + $newUnitsCount) > $maxUnits) {
+                return back()->with('error', "Cannot add {$newUnitsCount} units. Your plan limit is {$maxUnits} units (Currently used: {$currentUnitsCount}).");
+            }
 
             $building = Building::create([
                 'society_id' => $society->id,
@@ -116,7 +132,15 @@ class SocietyAdminController extends Controller
             'floor'        => 'nullable|integer'
         ]);
 
-        $societyId = $this->getSociety()->id;
+        $society = $this->getSociety();
+        $currentUnitsCount = Unit::where('society_id', $society->id)->count();
+        $maxUnits = $society->plan->max_units ?? 0;
+
+        if ($maxUnits > 0 && ($currentUnitsCount + $request->count) > $maxUnits) {
+            return back()->with('error', "Cannot add {$request->count} units. Your plan limit is {$maxUnits} units (Currently used: {$currentUnitsCount}).");
+        }
+
+        $societyId = $society->id;
         for ($i = 0; $i < $request->count; $i++) {
             Unit::create([
                 'society_id'  => $societyId,
@@ -129,12 +153,114 @@ class SocietyAdminController extends Controller
         return back()->with('success', 'Units created successfully.');
     }
 
+    public function updateBuilding(Request $request, Building $building)
+    {
+        if ($building->society_id !== $this->getSociety()->id) abort(403);
+        
+        $request->validate(['name' => 'required|string|max:50']);
+        $building->update(['name' => $request->name]);
+        return back()->with('success', 'Building renamed successfully.');
+    }
+
+    public function deleteBuilding(Building $building)
+    {
+        if ($building->society_id !== $this->getSociety()->id) abort(403);
+        
+        // Delete all units in this building
+        Unit::where('building_id', $building->id)->delete();
+        $building->delete();
+        
+        return back()->with('success', 'Building and all its units deleted successfully.');
+    }
+
+    public function updateUnit(Request $request, Unit $unit)
+    {
+        if ($unit->society_id !== $this->getSociety()->id) abort(403);
+        
+        $request->validate([
+            'unit_number' => 'required|string|max:20',
+            'status'      => 'required|in:vacant,occupied,maintenance'
+        ]);
+
+        $unit->update($request->only('unit_number', 'status'));
+        return back()->with('success', 'Unit updated successfully.');
+    }
+
+    public function deleteUnit(Unit $unit)
+    {
+        if ($unit->society_id !== $this->getSociety()->id) abort(403);
+        
+        $unit->delete();
+        return back()->with('success', 'Unit deleted successfully.');
+    }
+
     // ─── Manage Users ─────────────────────────────────────────
     public function users()
     {
         $society = $this->getSociety();
         $users = User::where('society_id', $society->id)->where('role_id', 3)->latest()->get();
         return view('society.admin.users.index', compact('users', 'society'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $society = $this->getSociety();
+        $request->validate([
+            'name'        => 'required|string|max:255',
+            'email'       => 'required|email|unique:users,email',
+            'password'    => 'required|string|min:8',
+            'unit_number' => 'nullable|string'
+        ]);
+
+        $user = User::create([
+            'society_id'  => $society->id,
+            'name'        => $request->name,
+            'email'       => $request->email,
+            'password'    => Hash::make($request->password),
+            'role_id'     => 3,
+            'unit_number' => $request->unit_number,
+            'is_approved' => true,
+            'is_active'   => true
+        ]);
+
+        // Link to unit if provided
+        if ($request->unit_number) {
+            Unit::where('society_id', $society->id)
+                ->where('unit_number', $request->unit_number)
+                ->update(['status' => 'occupied', 'user_id' => $user->id]);
+        }
+
+        return back()->with('success', 'Resident added successfully.');
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        if ($user->society_id !== $this->getSociety()->id) abort(403);
+        
+        $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'unit_number' => 'nullable|string'
+        ]);
+
+        $user->update($request->only('name', 'email', 'unit_number'));
+        
+        if ($request->filled('password')) {
+            $user->update(['password' => Hash::make($request->password)]);
+        }
+
+        return back()->with('success', 'Resident updated successfully.');
+    }
+
+    public function deleteUser(User $user)
+    {
+        if ($user->society_id !== $this->getSociety()->id) abort(403);
+        
+        // Unlink from units
+        Unit::where('user_id', $user->id)->update(['status' => 'vacant', 'user_id' => null]);
+        
+        $user->delete();
+        return back()->with('success', 'Resident deleted successfully.');
     }
 
     public function approveUser(User $user)
@@ -180,24 +306,29 @@ class SocietyAdminController extends Controller
     public function storeBill(Request $request)
     {
         $request->validate([
-            'unit_id'      => 'required|exists:society_units,id',
             'amount'       => 'required|numeric',
             'month'        => 'required',
             'year'         => 'required',
             'description'  => 'nullable'
         ]);
 
-        MaintenanceBill::create([
-            'society_id'   => $this->getSociety()->id,
-            'unit_id'      => $request->unit_id,
-            'total_amount' => $request->amount,
-            'month'        => $request->month,
-            'year'         => $request->year,
-            'details'      => ['description' => $request->description],
-            'status'       => 'unpaid'
-        ]);
+        $society = $this->getSociety();
+        $units = Unit::where('society_id', $society->id)->get();
 
-        return back()->with('success', 'Maintenance bill generated.');
+        foreach ($units as $unit) {
+            MaintenanceBill::create([
+                'society_id'   => $society->id,
+                'unit_id'      => $unit->id,
+                'user_id'      => $unit->user_id, // Link to user if unit is occupied
+                'total_amount' => $request->amount,
+                'month'        => $request->month,
+                'year'         => $request->year,
+                'details'      => ['description' => $request->description],
+                'status'       => 'unpaid'
+            ]);
+        }
+
+        return back()->with('success', "Maintenance bills generated for all " . $units->count() . " units.");
     }
 
     // ─── Society Passbook ─────────────────────────────────────
@@ -225,7 +356,7 @@ class SocietyAdminController extends Controller
 
         PassbookEntry::create([
             'society_id'  => $this->getSociety()->id,
-            'type'        => $request->type,
+            'entry_type'  => $request->type,
             'amount'      => $request->amount,
             'category'    => $request->category,
             'description' => $request->description,

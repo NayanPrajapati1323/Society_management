@@ -4,7 +4,21 @@
 @section('page-title', 'Design Society Structure')
 
 @section('content')
-<div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 1rem;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div style="display: flex; gap: 1.5rem; background: #fff; padding: .75rem 1.25rem; border-radius: 12px; border: 1px solid var(--border);">
+    <div>
+      <div style="font-size: .7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .05em;">Plan Limit</div>
+      <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">{{ $society->plan->max_units ?? '∞' }} Units</div>
+    </div>
+    <div style="width: 1px; background: var(--border);"></div>
+    <div>
+      <div style="font-size: .7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .05em;">Currently Used</div>
+      <div style="font-size: 1.1rem; font-weight: 800; color: {{ ($buildings->sum(fn($b) => $b->units->count()) >= ($society->plan->max_units ?? 9999)) ? '#dc2626' : '#10b981' }};">
+        {{ $buildings->sum(fn($b) => $b->units->count()) }} Units
+      </div>
+    </div>
+  </div>
+  
   <button class="btn btn-primary" onclick="openModal('addBuildingModal')">
     <i class="bi bi-plus-lg"></i> Add New {{ $society->type == 'flat' ? 'Tower' : 'Block' }}
   </button>
@@ -14,9 +28,25 @@
   @forelse($buildings as $building)
   <div class="card">
     <div class="card-header" style="background: #f8fafc;">
-      <div>
-        <h3 class="card-title">{{ $building->name }}</h3>
-        <span style="font-size: .75rem; color: var(--muted);">{{ $building->units->count() }} Units {{ $society->type == 'flat' ? '• '.$building->floors.' Floors' : '' }}</span>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+        <div>
+          <h3 class="card-title">{{ $building->name }}</h3>
+          <span style="font-size: .75rem; color: var(--muted);">{{ $building->units->count() }} Units {{ $society->type == 'flat' ? '• '.$building->floors.' Floors' : '' }}</span>
+        </div>
+        <div style="display: flex; gap: .5rem;">
+          <button onclick="openAddUnitsModal({{ $building->id }}, '{{ $building->name }}')" class="btn btn-sm btn-outline" style="padding: .2rem .4rem;" title="Add Units">
+            <i class="bi bi-plus-circle" style="font-size: .8rem;"></i>
+          </button>
+          <button onclick="openEditBuildingModal({{ $building->id }}, '{{ $building->name }}')" class="btn btn-sm btn-outline" style="padding: .2rem .4rem;" title="Rename">
+            <i class="bi bi-pencil" style="font-size: .8rem;"></i>
+          </button>
+          <form action="{{ route('society-admin.structure.building.delete', $building) }}" method="POST" onsubmit="return confirm('Delete this building and all its units?')">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-sm btn-outline" style="padding: .2rem .4rem; color: #dc2626;" title="Delete">
+              <i class="bi bi-trash" style="font-size: .8rem;"></i>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
     <div class="card-body p-all">
@@ -30,8 +60,8 @@
               @foreach($units->sortBy('unit_number') as $unit)
               @php $is_o = $unit->status == 'occupied' && $unit->owner; @endphp
               <div title="Unit: {{ $unit->unit_number }} ({{ ucfirst($unit->status) }})" 
-                   @if($is_o) onclick="showResident('{{ $unit->unit_number }}', '{{ $unit->owner->name }}', '{{ $unit->owner->email }}', '{{ $unit->owner->phone }}', '{{ asset('storage/'.$unit->owner->document_path) }}')" @endif
-                   style="height: 48px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; background: {{ $is_o ? '#dcfce7' : '#fff' }}; color: {{ $is_o ? '#15803d' : '#64748b' }}; border: 2px solid {{ $is_o ? '#bbf7d0' : '#f1f5f9' }}; transition: all .2s; {{ $is_o ? 'cursor: pointer;' : '' }}">
+                   onclick="manageUnit({{ json_encode($unit) }}, {{ $is_o ? 'true' : 'false' }}, '{{ $is_o ? $unit->owner->name : '' }}', '{{ $is_o ? $unit->owner->email : '' }}', '{{ $is_o ? $unit->owner->phone : '' }}', '{{ $is_o ? asset('storage/'.$unit->owner->document_path) : '' }}')"
+                   style="height: 48px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; background: {{ $is_o ? '#dcfce7' : '#fff' }}; color: {{ $is_o ? '#15803d' : '#64748b' }}; border: 2px solid {{ $is_o ? '#bbf7d0' : '#f1f5f9' }}; transition: all .2s; cursor: pointer;">
                 <span style="font-size: .65rem; opacity: .7; font-weight: 600;">{{ $unit->unit_number }}</span>
               </div>
               @endforeach
@@ -43,8 +73,8 @@
           @foreach($building->units->sortBy('unit_number') as $unit)
           @php $is_o = $unit->status == 'occupied' && $unit->owner; @endphp
           <div title="Unit: {{ $unit->unit_number }} ({{ ucfirst($unit->status) }})" 
-               @if($is_o) onclick="showResident('{{ $unit->unit_number }}', '{{ $unit->owner->name }}', '{{ $unit->owner->email }}', '{{ $unit->owner->phone }}', '{{ asset('storage/'.$unit->owner->document_path) }}')" @endif
-               style="height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; background: {{ $is_o ? '#dcfce7' : '#fff' }}; color: {{ $is_o ? '#15803d' : '#64748b' }}; border: 2px solid {{ $is_o ? '#bbf7d0' : '#f1f5f9' }}; {{ $is_o ? 'cursor: pointer;' : '' }}">
+               onclick="manageUnit({{ json_encode($unit) }}, {{ $is_o ? 'true' : 'false' }}, '{{ $is_o ? $unit->owner->name : '' }}', '{{ $is_o ? $unit->owner->email : '' }}', '{{ $is_o ? $unit->owner->phone : '' }}', '{{ $is_o ? asset('storage/'.$unit->owner->document_path) : '' }}')"
+               style="height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; background: {{ $is_o ? '#dcfce7' : '#fff' }}; color: {{ $is_o ? '#15803d' : '#64748b' }}; border: 2px solid {{ $is_o ? '#bbf7d0' : '#f1f5f9' }}; cursor: pointer;">
             {{ $unit->unit_number }}
           </div>
           @endforeach
@@ -106,33 +136,105 @@
     </form>
   </div>
 </div>
-<!-- Resident Details Modal -->
-<div id="residentModal" class="modal-overlay">
+<!-- Add Units to Building Modal -->
+<div id="addUnitsToBuildingModal" class="modal-overlay">
+  <div class="modal-container" style="max-width: 400px;">
+    <form action="{{ route('society-admin.structure.units.store') }}" method="POST">
+      @csrf
+      <div class="modal-header">
+        <h3 class="card-title">Add Units to <span id="add_units_building_name"></span></h3>
+        <button type="button" class="modal-close" onclick="closeModal('addUnitsToBuildingModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="building_id" id="add_units_building_id" />
+        <div class="form-group">
+          <label>Start From Number *</label>
+          <input type="number" name="start_number" class="form-control" placeholder="e.g. 101" required />
+        </div>
+        <div class="form-group">
+          <label>How many units to add? *</label>
+          <input type="number" name="count" class="form-control" min="1" max="100" placeholder="e.g. 5" required />
+        </div>
+        @if($society->type == 'flat')
+          <div class="form-group">
+            <label>Floor Number</label>
+            <input type="number" name="floor" class="form-control" placeholder="e.g. 1" />
+          </div>
+        @endif
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('addUnitsToBuildingModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Units</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Building Modal -->
+<div id="editBuildingModal" class="modal-overlay">
+  <div class="modal-container" style="max-width: 400px;">
+    <form id="editBuildingForm" method="POST">
+      @csrf @method('PUT')
+      <div class="modal-header">
+        <h3 class="card-title">Rename {{ $society->type == 'flat' ? 'Tower' : 'Block' }}</h3>
+        <button type="button" class="modal-close" onclick="closeModal('editBuildingModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" name="name" id="edit_building_name" class="form-control" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('editBuildingModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Name</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Manage Unit Modal -->
+<div id="manageUnitModal" class="modal-overlay">
   <div class="modal-container" style="max-width: 400px;">
     <div class="modal-header">
-      <h3 class="card-title">Resident Profile</h3>
-      <button type="button" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="closeModal('residentModal')">&times;</button>
+      <h3 class="card-title" id="manage_unit_title">Manage Unit</h3>
+      <button type="button" class="modal-close" onclick="closeModal('manageUnitModal')">&times;</button>
     </div>
-    <div class="modal-body text-center" style="padding: 1.5rem;">
-      <div id="res_image_wrap" style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto 1.25rem; border: 4px solid var(--primary-light);">
-        <img id="res_image" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-      </div>
-      <h3 id="res_name" style="font-size: 1.2rem; font-weight: 800; color: var(--dark); margin-bottom: .25rem;"></h3>
-      <div id="res_unit" style="display: inline-block; padding: .2rem .75rem; border-radius: 20px; background: #dcfce7; color: #15803d; font-size: .75rem; font-weight: 700; margin-bottom: 1.25rem;"></div>
-      
-      <div style="text-align: left; background: #f8fafc; border-radius: 12px; padding: 1rem; border: 1px solid #f1f5f9;">
-        <div style="margin-bottom: .75rem;">
-          <label style="display: block; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Email Address</label>
-          <div id="res_email" style="font-size: .88rem; font-weight: 600; color: var(--dark);"></div>
-        </div>
-        <div>
-          <label style="display: block; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Contact Number</label>
-          <div id="res_phone" style="font-size: .88rem; font-weight: 600; color: var(--dark);"></div>
+    <div class="modal-body">
+      <!-- Resident Info Section (Visible if occupied) -->
+      <div id="resident_info_section" style="display:none; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+        <div class="text-center">
+          <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; margin: 0 auto 1rem; border: 3px solid var(--primary-light);">
+            <img id="m_res_image" src="" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+          <h4 id="m_res_name" style="margin:0; color:var(--dark);"></h4>
+          <p id="m_res_email" style="font-size: .8rem; color:var(--muted); margin-top:.2rem;"></p>
         </div>
       </div>
-    </div>
-    <div class="modal-footer" style="justify-content: center;">
-      <button type="button" class="btn btn-primary" style="width: 100%;" onclick="closeModal('residentModal')">Close Profile</button>
+
+      <!-- Edit Unit Form -->
+      <form id="editUnitForm" method="POST">
+        @csrf @method('PUT')
+        <div class="form-group">
+          <label>Unit Number *</label>
+          <input type="text" name="unit_number" id="m_unit_number" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>Status *</label>
+          <select name="status" id="m_unit_status" class="form-control" required>
+            <option value="vacant">Vacant</option>
+            <option value="occupied">Occupied</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: .75rem; margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Update Unit</button>
+          <button type="button" id="deleteUnitBtn" class="btn btn-outline" style="color: #dc2626; border-color: #dc2626;">Delete</button>
+        </div>
+      </form>
+      <form id="deleteUnitForm" method="POST" style="display:none;">
+        @csrf @method('DELETE')
+      </form>
     </div>
   </div>
 </div>
@@ -141,13 +243,44 @@
 
 @section('scripts')
 <script>
-  function showResident(unit, name, email, phone, image) {
-    document.getElementById('res_name').innerText = name;
-    document.getElementById('res_unit').innerText = 'Unit ' + unit;
-    document.getElementById('res_email').innerText = email;
-    document.getElementById('res_phone').innerText = phone;
-    document.getElementById('res_image').src = image;
-    openModal('residentModal');
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  function openEditBuildingModal(id, name) {
+    document.getElementById('edit_building_name').value = name;
+    document.getElementById('editBuildingForm').action = "/society-admin/structure/building/" + id;
+    openModal('editBuildingModal');
+  }
+
+  function openAddUnitsModal(id, name) {
+    document.getElementById('add_units_building_id').value = id;
+    document.getElementById('add_units_building_name').innerText = name;
+    openModal('addUnitsToBuildingModal');
+  }
+
+  function manageUnit(unit, isOccupied, name, email, phone, image) {
+    document.getElementById('manage_unit_title').innerText = 'Manage Unit ' + unit.unit_number;
+    document.getElementById('m_unit_number').value = unit.unit_number;
+    document.getElementById('m_unit_status').value = unit.status;
+    document.getElementById('editUnitForm').action = "/society-admin/structure/unit/" + unit.id;
+    
+    const deleteForm = document.getElementById('deleteUnitForm');
+    deleteForm.action = "/society-admin/structure/unit/" + unit.id;
+    document.getElementById('deleteUnitBtn').onclick = () => {
+      if(confirm('Are you sure you want to delete this unit?')) deleteForm.submit();
+    };
+
+    const resSection = document.getElementById('resident_info_section');
+    if (isOccupied) {
+      resSection.style.display = 'block';
+      document.getElementById('m_res_name').innerText = name;
+      document.getElementById('m_res_email').innerText = email;
+      document.getElementById('m_res_image').src = image;
+    } else {
+      resSection.style.display = 'none';
+    }
+
+    openModal('manageUnitModal');
   }
 </script>
 @endsection

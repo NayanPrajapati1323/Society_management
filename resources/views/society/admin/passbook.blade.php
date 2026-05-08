@@ -27,10 +27,10 @@
     <h3 class="card-title">Transaction History</h3>
     <div style="display:flex; gap:1.5rem;">
       <div style="font-size:.8rem;">
-        <span style="color:var(--muted);">Credits:</span> <span style="color:#10b981; font-weight:700;">₹{{ number_format($entries->where('type','credit')->sum('amount'), 2) }}</span>
+        <span style="color:var(--muted);">Credits:</span> <span style="color:#10b981; font-weight:700;">₹{{ number_format($entries->where('entry_type','credit')->sum('amount'), 2) }}</span>
       </div>
       <div style="font-size:.8rem;">
-        <span style="color:var(--muted);">Debits:</span> <span style="color:#ef4444; font-weight:700;">₹{{ number_format($entries->where('type','debit')->sum('amount'), 2) }}</span>
+        <span style="color:var(--muted);">Debits:</span> <span style="color:#ef4444; font-weight:700;">₹{{ number_format($entries->where('entry_type','debit')->sum('amount'), 2) }}</span>
       </div>
     </div>
   </div>
@@ -51,13 +51,13 @@
           <tr>
             <td style="white-space:nowrap;">{{ \Carbon\Carbon::parse($entry->entry_date)->format('d M, Y') }}</td>
             <td>
-              <span class="badge {{ $entry->type == 'credit' ? 'badge-active' : 'badge-inactive' }}" style="background: {{ $entry->type == 'credit' ? '#dcfce7' : '#fee2e2' }}; color: {{ $entry->type == 'credit' ? '#15803d' : '#dc2626' }};">
-                {{ ucfirst($entry->type) }}
+              <span class="badge {{ $entry->entry_type == 'credit' ? 'badge-active' : 'badge-inactive' }}" style="background: {{ $entry->entry_type == 'credit' ? '#dcfce7' : '#fee2e2' }}; color: {{ $entry->entry_type == 'credit' ? '#15803d' : '#dc2626' }};">
+                {{ ucfirst($entry->entry_type) }}
               </span>
             </td>
             <td><strong>{{ $entry->category }}</strong></td>
             <td style="max-width: 300px; color: var(--muted); font-size: .8rem;">{{ $entry->description }}</td>
-            <td><strong style="color: {{ $entry->type == 'credit' ? '#10b981' : '#ef4444' }};">₹{{ number_format($entry->amount, 2) }}</strong></td>
+            <td><strong style="color: {{ $entry->entry_type == 'credit' ? '#10b981' : '#ef4444' }};">₹{{ number_format($entry->amount, 2) }}</strong></td>
           </tr>
           @empty
           <tr><td colspan="5" style="text-align:center; padding:3rem; color:var(--muted);">No financial records found.</td></tr>

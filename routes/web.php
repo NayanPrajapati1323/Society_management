@@ -25,6 +25,8 @@ Route::middleware(['auth', 'role:3', 'society_approved', 'society_active'])->pre
     Route::get('/dashboard',       [SocietyUserController::class, 'dashboard'])->name('dashboard');
     Route::get('/passbook',        [SocietyUserController::class, 'passbook'])->name('passbook');
     Route::get('/settings',        [SocietyUserController::class, 'settings'])->name('settings');
+    Route::get('/visitors',        [SocietyUserController::class, 'visitors'])->name('visitors');
+    Route::post('/visitors',       [SocietyUserController::class, 'storeVisitor'])->name('visitors.store');
     Route::post('/profile/update',  [SocietyUserController::class, 'updateProfile'])->name('profile.update');
     Route::post('/password/update', [SocietyUserController::class, 'updatePassword'])->name('password.update');
 });
@@ -60,6 +62,11 @@ Route::middleware(['auth', 'role:2', 'society_active'])->prefix('society-admin')
     // Passbook
     Route::get('/passbook',               [SocietyAdminController::class, 'passbook'])->name('passbook');
     Route::post('/passbook/entry',        [SocietyAdminController::class, 'storePassbookEntry'])->name('passbook.entry.store');
+
+    // Visitors
+    Route::get('/visitors',               [SocietyAdminController::class, 'visitors'])->name('visitors');
+    Route::post('/visitors',              [SocietyAdminController::class, 'storeVisitor'])->name('visitors.store');
+    Route::patch('/visitors/{id}/status', [SocietyAdminController::class, 'updateVisitorStatus'])->name('visitors.update-status');
 
     // Settings
     Route::get('/settings',               [SocietyAdminController::class, 'settings'])->name('settings');

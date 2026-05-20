@@ -89,6 +89,11 @@
         </a>
       </li>
       <li class="nav-item">
+        <a href="{{ route('society.user.visitors') }}" class="nav-link {{ Route::is('society.user.visitors') ? 'active' : '' }}">
+          <i class="bi bi-person-plus"></i> My Visitors
+        </a>
+      </li>
+      <li class="nav-item">
         <a href="{{ route('society.user.passbook') }}" class="nav-link {{ Route::is('society.user.passbook') ? 'active' : '' }}">
           <i class="bi bi-journal-text"></i> Resident Passbook
         </a>

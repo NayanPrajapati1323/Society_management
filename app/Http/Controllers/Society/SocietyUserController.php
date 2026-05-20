@@ -106,4 +106,54 @@ class SocietyUserController extends Controller
         $user->update(['password' => Hash::make($request->password)]);
         return back()->with('success', 'Password changed successfully.');
     }
+
+    public function visitors()
+    {
+        $user = Auth::user();
+        $visitor_types = \App\Models\VisitorType::all();
+        $entries = \App\Models\VisitorEntry::with('visitor', 'visitorType')
+            ->where('resident_id', $user->id)
+            ->latest()
+            ->get();
+            
+        return view('society.user.visitors', compact('visitor_types', 'entries'));
+    }
+
+    public function storeVisitor(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'mobile' => 'required|string|max:15',
+            'visitor_type_id' => 'required|exists:visitor_types,id',
+            'purpose' => 'nullable|string',
+            'visit_date_time' => 'nullable|date',
+        ]);
+
+        $user = Auth::user();
+        
+        // Find or create visitor
+        $visitor = \App\Models\Visitor::firstOrCreate(
+            ['mobile' => $request->mobile],
+            ['name' => $request->name, 'vehicle_number' => $request->vehicle_number]
+        );
+
+        // Find unit of the user
+        $unit = \App\Models\Unit::where('user_id', $user->id)->first();
+
+        // Create entry
+        \App\Models\VisitorEntry::create([
+            'visitor_id' => $visitor->id,
+            'society_id' => $user->society_id,
+            'society_unit_id' => $unit ? $unit->id : null,
+            'visitor_type_id' => $request->visitor_type_id,
+            'resident_id' => $user->id,
+            'purpose' => $request->purpose,
+            'status' => 'Pre-Approved', // Pre-approved by resident
+            'entry_time' => $request->visit_date_time,
+            'otp' => rand(100000, 999999),
+            'qr_code' => \Illuminate\Support\Str::random(20),
+        ]);
+
+        return back()->with('success', 'Visitor scheduled successfully.');
+    }
 }

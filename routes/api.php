@@ -34,4 +34,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/expense', [\App\Http\Controllers\Society\AccountingController::class, 'addExpense']);
         Route::post('/advance-deposit', [\App\Http\Controllers\Society\AccountingController::class, 'depositAdvance']);
     });
+
+    // Visitor Management Routes
+    Route::prefix('visitors')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Society\VisitorController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Society\VisitorController::class, 'store']);
+        Route::put('/{id}', [\App\Http\Controllers\Society\VisitorController::class, 'update']);
+        Route::post('/verify-otp', [\App\Http\Controllers\Society\VisitorController::class, 'verifyOtp']);
+        Route::post('/verify-qr', [\App\Http\Controllers\Society\VisitorController::class, 'verifyQr']);
+    });
 });

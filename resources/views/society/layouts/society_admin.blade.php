@@ -123,6 +123,9 @@
       @php $pending = \App\Models\User::where('society_id', auth()->user()->society_id)->where('is_approved', false)->count(); @endphp
       @if($pending > 0)<span style="margin-left:auto; background:#ef4444; color:#fff; font-size:.65rem; padding:.1rem .4rem; border-radius:10px;">{{ $pending }}</span>@endif
     </a>
+    <a href="{{ route('society-admin.visitors') }}" class="sidebar-link {{ request()->routeIs('society-admin.visitors*') ? 'active' : '' }}">
+      <i class="bi bi-person-badge"></i> Visitor Log
+    </a>
     <a href="{{ route('society-admin.maintenance') }}" class="sidebar-link {{ request()->routeIs('society-admin.maintenance*') ? 'active' : '' }}">
       <i class="bi bi-receipt"></i> Maintenance
     </a>

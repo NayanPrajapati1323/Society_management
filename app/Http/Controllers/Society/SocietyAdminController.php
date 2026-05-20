@@ -385,4 +385,82 @@ class SocietyAdminController extends Controller
         $society->update($request->only('name', 'address'));
         return back()->with('success', 'Profile updated successfully.');
     }
+
+    public function visitors()
+    {
+        $society = $this->getSociety();
+        $units = \App\Models\Unit::where('society_id', $society->id)->get();
+        $visitor_types = \App\Models\VisitorType::all();
+        
+        $entries = \App\Models\VisitorEntry::with('visitor', 'visitorType', 'unit')
+            ->where('society_id', $society->id)
+            ->latest()
+            ->get();
+        
+        return view('society.admin.visitors', compact('units', 'visitor_types', 'society', 'entries'));
+    }
+
+    public function storeVisitor(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'mobile' => 'required|string|max:15',
+            'visitor_type_id' => 'required|exists:visitor_types,id',
+            'society_unit_id' => 'required|exists:society_units,id',
+            'purpose' => 'nullable|string',
+        ]);
+
+        $society = $this->getSociety();
+        
+        // Find or create visitor
+        $visitor = \App\Models\Visitor::firstOrCreate(
+            ['mobile' => $request->mobile],
+            ['name' => $request->name, 'vehicle_number' => $request->vehicle_number]
+        );
+
+        // Find resident of the unit
+        $unit = \App\Models\Unit::find($request->society_unit_id);
+        $residentId = $unit ? $unit->user_id : null;
+
+        // Create entry
+        \App\Models\VisitorEntry::create([
+            'visitor_id' => $visitor->id,
+            'society_id' => $society->id,
+            'society_unit_id' => $request->society_unit_id,
+            'visitor_type_id' => $request->visitor_type_id,
+            'resident_id' => $residentId,
+            'purpose' => $request->purpose,
+            'status' => 'In Society', // Admin creates it as active
+            'entry_time' => now(), // Assume checked in
+        ]);
+
+        return back()->with('success', 'Visitor added successfully.');
+    }
+
+    public function updateVisitorStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:Pre-Approved,In Society,Completed',
+        ]);
+
+        $entry = \App\Models\VisitorEntry::findOrFail($id);
+        
+        // Ensure entry belongs to this society
+        if ($entry->society_id !== $this->getSociety()->id) {
+            abort(403);
+        }
+
+        $data = ['status' => $request->status];
+
+        // Set entry/exit time based on status
+        if ($request->status == 'In Society' && !$entry->entry_time) {
+            $data['entry_time'] = now();
+        } elseif ($request->status == 'Completed' && !$entry->exit_time) {
+            $data['exit_time'] = now();
+        }
+
+        $entry->update($data);
+
+        return back()->with('success', 'Visitor status updated to ' . $request->status);
+    }
 }
